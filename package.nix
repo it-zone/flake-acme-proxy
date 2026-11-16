@@ -4,6 +4,8 @@
   fetchFromGitHub,
   installShellFiles,
   nix-update-script,
+  pkg-config,
+  sqlite,
   stdenv,
 }:
 
@@ -22,7 +24,19 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   cargoHash = "sha256-CyS009yrvlzSLpI7CeQT9JPTBHgQqg9X838MeyQ8zZo=";
 
-  nativeBuildInputs = [ installShellFiles ];
+  nativeBuildInputs = [
+    installShellFiles
+    pkg-config
+  ];
+
+  # `sqlx`'s `sqlite` feature pulls in `libsqlite3-sys`, which links against the
+  # system SQLite instead of bundling it (its `bundled` feature is not enabled
+  # by default). `libsqlite3-sys` then probes SQLite via pkg-config, but with
+  # `print_system_libs(false)` it only emits `-lsqlite3` without any `-L` path,
+  # so the linker cannot find the library. Providing SQLite as a build input
+  # puts `libsqlite3.so` and `sqlite3.pc` on the linker and pkg-config search
+  # paths.
+  buildInputs = [ sqlite ];
 
   # Workspace member tests are not built by the default cargo invocation; the
   # crate-level integration tests in `src/` are exercised by `cargo nextest`
